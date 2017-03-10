@@ -5,17 +5,37 @@ output:
     keep_md: true
 ---
 
+### set working directory, load required libraries
+```{r echo=TRUE}
+setwd("~/Documents/Coursera/Reproducible Research/RepData_PeerAssessment1")
+library(plyr)
+```
 
-## Loading and preprocessing the data
-
-
+### Loading and preprocessing the data
+```{r echo=TRUE}
+activity <- read.csv("activity.csv", header = TRUE)
+```
 
 ## What is mean total number of steps taken per day?
 
+```{r echo=TRUE}
+stepspd <- ddply(activity, .(date), summarize, steps=sum(steps))
+stepspd <- subset(stepspd, !is.na(steps))
+meansteps <- as.integer(mean(stepspd$steps))
+mediansteps <- median(stepspd$steps)
 
+mplot <- t(as.matrix(stepspd[-1]))
+colnames(mplot) <- stepspd$date
+
+barplot(mplot, main="Total Steps Per Day", xlab="Date", ylab="Steps")
+```
+
+The mean total steps per day is `r meansteps`.  The median total steps per day is `r mediansteps`.
 
 ## What is the average daily activity pattern?
 
+stepstimeseries <- ts(activity, frequency=288, start=c(0,5))
+plot.ts(stepstimeseries)
 
 
 ## Imputing missing values
