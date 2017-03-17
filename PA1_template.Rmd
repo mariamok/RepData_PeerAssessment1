@@ -16,13 +16,13 @@ library(plyr)
 activity <- read.csv("activity.csv", header = TRUE)
 ```
 
-## What is mean total number of steps taken per day?
+## What is the mean total number of steps taken per day?
 
 ```{r echo=TRUE}
 stepspd <- ddply(activity, .(date), summarize, steps=sum(steps))
 stepspd <- subset(stepspd, !is.na(steps))
 meansteps <- as.integer(mean(stepspd$steps))
-mediansteps <- median(stepspd$steps)
+mediansteps <- as.integer(median(stepspd$steps))
 
 mplot <- t(as.matrix(stepspd[-1]))
 colnames(mplot) <- stepspd$date
@@ -33,13 +33,51 @@ barplot(mplot, main="Total Steps Per Day", xlab="Date", ylab="Steps")
 The mean total steps per day is `r meansteps`.  The median total steps per day is `r mediansteps`.
 
 ## What is the average daily activity pattern?
+```{r echo=true}
+stepspi <- ddply(activity, .(interval), summarise, steps=mean(steps, na.rm=TRUE))
+stepspi2 <- stepspi[-1]
+plot.ts(stepspi2, main="Average Steps Per Interval", xlab="Interval", ylab="Average Steps")
 
-stepstimeseries <- ts(activity, frequency=288, start=c(0,5))
-plot.ts(stepstimeseries)
+indexarray <- which(stepspi==max(stepspi$steps), arr.ind = TRUE)
+maxInterval <- stepspi[indexarray[1,1],1]
+maxSteps <- stepspi[indexarray[1,1],2]
+
+```
+
+The 5 minute interval with the maximium average number of steps is `r maxInterval` with `r maxSteps` steps. 
 
 
 ## Imputing missing values
 
+```{r echo=TRUE}
+naVals <- count(is.na(activity$steps))[2,2]
 
+```
+ 
+There are `r naVals` rows with NA values.
+
+The strategy used to inpute missing values was to replace NA with the average steps for the interval.
+
+```{r echo=TRUE}               
+activity2 <- activity
+for(i in stepspi$interval){ 
+  subi <- subset(stepspi, interval==i)
+  activity2$steps[is.na(activity2$steps) & activity2$interval==i] <- subi[1,2]
+}
+
+stepspd <- ddply(activity2, .(date), summarize, steps=sum(steps))
+meansteps <- as.integer(mean(stepspd$steps))
+mediansteps <- as.integer(median(stepspd$steps))
+
+mplot <- t(as.matrix(stepspd[-1]))
+colnames(mplot) <- stepspd$date
+
+barplot(mplot, main="Total Steps Per Day (Imputed)", xlab="Date", ylab="Steps")
+
+```
+
+The mean total steps per day (imputed) is `r meansteps`.  The median total steps per day (imputed) is `r mediansteps`.
+
+The difference between omitting NA values and imputing them with the mean for the interval had no effect on the mean steps per day.  The median went from 10765 (omitting NA values) to 10766 (imputing with mean of the interval).
 
 ## Are there differences in activity patterns between weekdays and weekends?
