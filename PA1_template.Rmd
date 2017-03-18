@@ -5,10 +5,11 @@ output:
     keep_md: true
 ---
 
-### set working directory, load required libraries
+### Set working directory, load required libraries
 ```{r echo=TRUE}
 setwd("~/Documents/Coursera/Reproducible Research/RepData_PeerAssessment1")
 library(plyr)
+library(lattice)
 ```
 
 ### Loading and preprocessing the data
@@ -40,11 +41,11 @@ plot.ts(stepspi2, main="Average Steps Per Interval", xlab="Interval", ylab="Aver
 
 indexarray <- which(stepspi==max(stepspi$steps), arr.ind = TRUE)
 maxInterval <- stepspi[indexarray[1,1],1]
-maxSteps <- stepspi[indexarray[1,1],2]
+maxSteps <- round(stepspi[indexarray[1,1],2])
 
 ```
 
-The 5 minute interval with the maximium average number of steps is `r maxInterval` with `r maxSteps` steps. 
+The 5 minute interval with the maximium average number of steps is interval `r maxInterval` with `r maxSteps` steps. 
 
 
 ## Imputing missing values
@@ -56,18 +57,18 @@ naVals <- count(is.na(activity$steps))[2,2]
  
 There are `r naVals` rows with NA values.
 
-The strategy used to inpute missing values was to replace NA with the average steps for the interval.
+The strategy used to inpute missing values was to replace NA with the average steps for the interval, rounded to the nearest integer.
 
 ```{r echo=TRUE}               
 activity2 <- activity
 for(i in stepspi$interval){ 
   subi <- subset(stepspi, interval==i)
-  activity2$steps[is.na(activity2$steps) & activity2$interval==i] <- subi[1,2]
+  activity2$steps[is.na(activity2$steps) & activity2$interval==i] <- round(subi[1,2])
 }
 
 stepspd <- ddply(activity2, .(date), summarize, steps=sum(steps))
-meansteps <- as.integer(mean(stepspd$steps))
-mediansteps <- as.integer(median(stepspd$steps))
+meansteps2 <- as.integer(mean(stepspd$steps))
+mediansteps2 <- as.integer(median(stepspd$steps))
 
 mplot <- t(as.matrix(stepspd[-1]))
 colnames(mplot) <- stepspd$date
@@ -76,8 +77,26 @@ barplot(mplot, main="Total Steps Per Day (Imputed)", xlab="Date", ylab="Steps")
 
 ```
 
-The mean total steps per day (imputed) is `r meansteps`.  The median total steps per day (imputed) is `r mediansteps`.
+The mean total steps per day (imputed) is `r meansteps2`.  The median total steps per day (imputed) is `r mediansteps2`.
 
-The difference between omitting NA values and imputing them with the mean for the interval had no effect on the mean steps per day.  The median went from 10765 (omitting NA values) to 10766 (imputing with mean of the interval).
+Comparing omitting vs imputing NA values:
+Mean (omitting NA values): `r meansteps`
+Mean (imputing NA values): `r meansteps2`
+Median (omitting NA values): `r mediansteps`
+Median (imputing NA values): `r mediansteps2`
+
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r echo=TRUE}
+for(i in seq(activity2$date))
+  if (weekdays(as.Date(activity2[i,2])) %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")){
+    activity2$dayofweek[i] <- "Weekday"  
+  }else{
+    activity2$dayofweek[i] <- "Weekend"  
+  }
+
+stepspi <- ddply(activity2, .(interval, dayofweek), summarise, steps=mean(steps, na.rm=TRUE))
+stepspi$dayofweek <- as.factor(stepspi$dayofweek)
+
+xyplot(steps ~ interval | dayofweek, data = stepspi, type = "l", layout=c(1,2))
